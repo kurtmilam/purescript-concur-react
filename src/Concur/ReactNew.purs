@@ -26,7 +26,7 @@ componentClassWithMount onMount winit
     Tuple winit' v <- dischargePartialEffect winit
     R.make (R.createComponent "Concur")
       { initialState: mkComponentState v
-      , render: \self -> R.element <$> self.state
+      , render: \self -> render <$> self.state
       , componentDidMount: \self -> onMount *> handler self (Right winit')
       }
     where
@@ -36,7 +36,7 @@ componentClassWithMount onMount winit
       handler _ (Left err) = do
         log ("FAILED! " <> show err)
         pure unit
-      render st = R.element <$> st.chilren
+      render st = R.element st.view
 
 componentClass :: forall a. Widget HTML a -> R.Component {}
 componentClass = componentClassWithMount mempty
