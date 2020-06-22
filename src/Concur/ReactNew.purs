@@ -17,30 +17,29 @@ type HTML
 type ComponentState
   = { view :: HTML }
 
-type WidgetProps = {}
-
 mkComponentState :: HTML -> ComponentState
 mkComponentState v = { view: v }
 
-componentClassWithMount :: forall a. Effect Unit -> Widget HTML a -> WidgetProps -> R.JSX
-componentClassWithMount onMount winit = component
-  where
-    component this = do
-      Tuple winit' v <- dischargePartialEffect winit
-      pure $ R.make (R.createComponent "Concur")
-        { initialState: mkComponentState v
-        , render: R.element this.state.view
-        , componentDidMount: onMount *> handler this (Right winit')
-        }
-    handler self (Right r) = do
-      v <- discharge (handler self) r
-      void $ self.setState (mkComponentState v)
-    handler _ (Left err) = do
-      log ("FAILED! " <> show err)
-      pure unit
+componentClassWithMount :: forall a. Effect Unit -> Widget HTML a -> R.Component {}
+componentClassWithMount onMount winit
+  = do
+    Tuple winit' v <- dischargePartialEffect winit
+    R.make (R.createComponent "Concur")
+      { initialState: mkComponentState v
+      , render: \self -> R.element <$> self.state
+      , componentDidMount: \self -> onMount *> handler self (Right winit')
+      }
+    where
+      handler self (Right r) = do
+        v <- discharge (handler self) r
+        void $ self.setState (mkComponentState v)
+      handler _ (Left err) = do
+        log ("FAILED! " <> show err)
+        pure unit
+      render st = R.element <$> st.chilren
 
 componentClass :: forall a. Widget HTML a -> R.Component {}
 componentClass = componentClassWithMount mempty
 
 renderComponent :: forall a. Widget HTML a -> R.JSX
-renderComponent init = componentClass init {}
+renderComponent init = R.element (componentClass init) {}
